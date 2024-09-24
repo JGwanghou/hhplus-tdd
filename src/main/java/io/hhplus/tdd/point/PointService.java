@@ -2,19 +2,16 @@ package io.hhplus.tdd.point;
 
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class PointService {
     private final UserPointTable userPointTable;
     private final PointHistoryTable pointHistoryTable;
-
-    public PointService(UserPointTable userPointTable, PointHistoryTable pointHistoryTable) {
-        this.userPointTable = userPointTable;
-        this.pointHistoryTable = pointHistoryTable;
-    }
 
     // 특정 유저의 포인트를 조회
     public UserPoint getUserPoint(Long id) {
@@ -31,8 +28,9 @@ public class PointService {
         pointHistoryTable.insert(id, amount, TransactionType.CHARGE, System.currentTimeMillis());
         return userPointTable.insertOrUpdate(id, amount);
     }
-//
-//    public UserPoint getPoint(Long id) {
-//        return userPointTable.selectById(id);
-//    }
+
+    public UserPoint usePoint(Long id, Long amount) {
+        pointHistoryTable.insert(id, amount, TransactionType.USE, System.currentTimeMillis());
+        return userPointTable.insertOrUpdate(id, amount);
+    }
 }
