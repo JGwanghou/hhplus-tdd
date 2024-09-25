@@ -70,15 +70,23 @@ class PointServiceTest {
     void addPoint() {
         long userId = 1L;
         long amount = 3500L;
-        UserPoint mockUserPoint = new UserPoint(userId, amount, System.currentTimeMillis());
 
-        when(userPointTable.insertOrUpdate(userId, amount)).thenReturn(mockUserPoint);
+        UserPoint userPoint;
+        when(userPointTable.selectById(userId)).thenReturn(
+                new UserPoint(userId, 0L, System.currentTimeMillis())
+        );
+
+        when(userPointTable.insertOrUpdate(userId, amount)).thenReturn(
+                userPoint = new UserPoint(userId, amount, System.currentTimeMillis())
+        );
+
         UserPoint result = pointService.addPoint(userId, amount);
 
+        verify(userPointTable).selectById(userId); // userPoint 조회
         verify(userPointTable).insertOrUpdate(userId, amount);
         verify(pointHistoryTable).insert(eq(userId), eq(amount), eq(TransactionType.CHARGE), anyLong());
 
-        assertEquals(mockUserPoint, result);
+        assertEquals(userPoint, result);
     }
 
     @Test
@@ -86,15 +94,43 @@ class PointServiceTest {
     void usePoint() {
         long userId = 1L;
         long amount = 3500L;
-        UserPoint mockUserPoint = new UserPoint(userId, amount, System.currentTimeMillis());
+        long useAmount = 2000L;
+        long resultAmount = amount - useAmount;
 
-        when(userPointTable.insertOrUpdate(userId, amount)).thenReturn(mockUserPoint);
-        UserPoint result = pointService.usePoint(userId, amount);
+        UserPoint userPoint;
+        when(userPointTable.selectById(userId)).thenReturn(
+                new UserPoint(userId, amount, System.currentTimeMillis())
+        ); // 3500 포인트 유저 생성
 
-        verify(userPointTable).insertOrUpdate(userId, amount);
-        verify(pointHistoryTable).insert(eq(userId), eq(amount), eq(TransactionType.USE), anyLong());
+        when(userPointTable.insertOrUpdate(userId, resultAmount)).thenReturn(
+                userPoint = new UserPoint(userId, resultAmount, System.currentTimeMillis())
+        ); // 아래 useAmount 2000이 Service에서 userPoint.point() - 2000이므로 resultAmount 인자넣어서 차감된 값 기대
 
-        assertEquals(mockUserPoint, result);
+        UserPoint result = pointService.usePoint(userId, useAmount);
 
+        verify(userPointTable).selectById(userId);
+        verify(userPointTable).insertOrUpdate(userId, resultAmount);
+        verify(pointHistoryTable).insert(eq(userId), eq(useAmount), eq(TransactionType.USE), anyLong());
+
+        assertEquals(userPoint, result);
+    }
+
+    @Test
+    @DisplayName("잔고가 부족한 경우 ")
+    void usePointException(){
+        long userId = 1L;
+        long amount = 1000L; // 잔고 1000으로 설정
+        long useAmount = 2000L; // 2000 포인트 사용 시도
+
+        // 잔고가 부족한 유저 설정
+        when(userPointTable.selectById(userId)).thenReturn(
+                new UserPoint(userId, amount, System.currentTimeMillis())
+        ); // 1000 포인트 유저 생성
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class, () -> pointService.usePoint(userId, useAmount)
+        );
+
+        assertEquals("에러가 발생했습니다.", exception.getMessage());
     }
 }

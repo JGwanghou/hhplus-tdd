@@ -25,12 +25,21 @@ public class PointService {
 
     // 특정 유저의 포인트를 충전
     public UserPoint addPoint(Long id, Long amount) {
+        UserPoint userPoint = userPointTable.selectById(id);
+        long point = userPoint.point() + amount;
+
         pointHistoryTable.insert(id, amount, TransactionType.CHARGE, System.currentTimeMillis());
-        return userPointTable.insertOrUpdate(id, amount);
+        return userPointTable.insertOrUpdate(id, point);
     }
 
     public UserPoint usePoint(Long id, Long amount) {
+        UserPoint userPoint = userPointTable.selectById(id);
+        if(userPoint.point() < amount){
+            throw new IllegalStateException("에러가 발생했습니다.");
+        }
+
+        long point = userPoint.point() - amount;
         pointHistoryTable.insert(id, amount, TransactionType.USE, System.currentTimeMillis());
-        return userPointTable.insertOrUpdate(id, amount);
+        return userPointTable.insertOrUpdate(id, point);
     }
 }

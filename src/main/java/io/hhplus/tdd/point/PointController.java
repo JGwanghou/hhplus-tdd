@@ -58,4 +58,11 @@ public class PointController {
     ) {
         return pointService.usePoint(id, amount);
     }
+
+
+    @GetMapping("/exception")
+    public void exception(
+    ) {
+        throw new IllegalStateException("잔고가 부족한 예외");
+    }
 }
